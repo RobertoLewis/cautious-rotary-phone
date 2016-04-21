@@ -1,0 +1,205 @@
+
+The simple primitive types are: string, number, boolean, null, and undefined. The non-primitive value types are object, function, array, etc.
+
+Simple primitives are held by value and assigned by value-copy. Non-primitives are held by reference and assigned by reference-copy. Unlike other languages, JS does not provide any syntactic controls that let you change the assignment behavior; only the value type determines it.
+****
+
+Coercion is the set of rules for how JavaScript performs conversions from one type to another. Coercion can be expressed explicitly or implicitly, depending on the intent of the code and goals of the developer.
+
+One place where coercion occurs commonly is in comparisons with ==. Generally, the process for such comparison is to first turn any non-primitives (arrays, objects, etc) to primitives, and then all primitives to their number form, unless both sides are strings, in which case the string contents are compared.
+
+The === operator by contrast does not allow any coercion to occur in the comparison.
+***********
+
+
+Lexical Scope is the model for how variable and function declarations are attached to their appropriate enclosing scopes. It's important to keep these declarations organized so that the JS engine knows where to find variables as you use them.
+
+Scopes can be nested. Look-up of a variable continues from the current scope upward/outward until a variable of the matching name is found. A ReferenceError is thrown if the variable isn't found in any of the available scopes.
+
+IIFEs are functions that are not declared but instead appear as expressions, and then are immediately invoked. This is a convenient way to create some scope inside another scope. ES6 lets us do similar things with { .. } blocks and let.
+************
+
+Scope is the set of rules that determines where and how a variable (identifier) can be looked-up. This look-up may be for the purposes of assigning to the variable, which is an LHS (left-hand-side) reference, or it may be for the purposes of retrieving its value, which is an RHS (right-hand-side) reference.
+
+LHS references result from assignment operations. Scope-related assignments can occur either with the = operator or by passing arguments to (assign to) function parameters.
+
+The JavaScript Engine first compiles code before it executes, and in so doing, it splits up statements like var a = 2; into two separate steps:
+
+First, var a to declare it in that Scope. This is performed at the beginning, before code execution.
+
+Later, a = 2 to look up the variable (LHS reference) and assign to it if found.
+
+Both LHS and RHS reference look-ups start at the currently executing Scope, and if need be (that is, they don't find what they're looking for there), they work their way up the nested Scope, one scope (floor) at a time, looking for the identifier, until they get to the global (top floor) and stop, and either find it, or don't.
+
+Unfulfilled RHS references result in ReferenceErrors being thrown. Unfulfilled LHS references result in an automatic, implicitly-created global of that name (if not in "Strict Mode" [^note-strictmode]), or a ReferenceError (if in "Strict Mode" [^note-strictmode]).
+*************
+
+Lexical scope means that scope is defined by author-time decisions of where functions are declared. The lexing phase of compilation is essentially able to know where and how all identifiers are declared, and thus predict how they will be looked-up during execution.
+
+Two mechanisms in JavaScript can "cheat" lexical scope: eval(..) and with. The former can modify existing lexical scope (at runtime) by evaluating a string of "code" which has one or more declarations in it. The latter essentially creates a whole new lexical scope (again, at runtime) by treating an object reference as a "scope" and that object's properties as scoped identifiers.
+
+The downside to these mechanisms is that it defeats the Engine's ability to perform compile-time optimizations regarding scope look-up, because the Engine has to assume pessimistically that such optimizations will be invalid. Code will run slower as a result of using either feature. Don't use them.
+***************
+
+
+Functions are the most common unit of scope in JavaScript. Variables and functions that are declared inside another function are essentially "hidden" from any of the enclosing "scopes", which is an intentional design principle of good software.
+
+But functions are by no means the only unit of scope. Block-scope refers to the idea that variables and functions can belong to an arbitrary block (generally, any { .. } pair) of code, rather than only to the enclosing function.
+
+Starting with ES3, the try/catch structure has block-scope in the catch clause.
+
+In ES6, the let keyword (a cousin to the var keyword) is introduced to allow declarations of variables in any arbitrary block of code. if (..) { let a = 2; } will declare a variable a that essentially hijacks the scope of the if's { .. } block and attaches itself there.
+
+Though some seem to believe so, block scope should not be taken as an outright replacement of var function scope. Both functionalities co-exist, and developers can and should use both function-scope and block-scope techniques where respectively appropriate to produce better, more readable/maintainable code.
+
+*****************
+
+
+
+Determining the this binding for an executing function requires finding the direct call-site of that function. Once examined, four rules can be applied to the call-site, in this order of precedence:
+
+Called with new? Use the newly constructed object.
+
+Called with call or apply (or bind)? Use the specified object.
+
+Called with a context object owning the call? Use that context object.
+
+Default: undefined in strict mode, global object otherwise.
+
+Be careful of accidental/unintentional invoking of the default binding rule. In cases where you want to "safely" ignore a this binding, a "DMZ" object like ø = Object.create(null) is a good placeholder value that protects the global object from unintended side-effects.
+
+Instead of the four standard binding rules, ES6 arrow-functions use lexical scoping for this binding, which means they adopt the this binding (whatever it is) from its enclosing function call. They are essentially a syntactic replacement of self = this in pre-ES6 coding.
+
+*****
+
+There are four rules for determining a this keyword's binding inside a function call. Did the call-site have...
+
++ new? If so, use the newly created object.
++ call or apply? If so, use the specified object. Note: bind(..) is a variation of this rule since it uses apply(..) under the covers.
++ context object? If so, use the context object.
++ Otherwise, defaul to the global object, except in strict-mode where it remains undefined.
+
+You cannot answer these questions without finding the call-site, which is how a function is actually called. Where a function is declared or even where it's called from are completely irrelevant.
+*************
+
+Every object in JS is [[Prototype]] linked to some other object. This linkage is used when you reference a property on the object that doesn't exist, in which case JS follows the [[Prototype]] linkage to that other object and keeps looking there. In that way, prototypes are similar to nested lexical scopes, in that a property look-up follows from the immediate object context up the chain until it's found.
+
+OLOO style code removes new, .prototype, and functions-as-constructors, and just embraces linking concrete objects together and virtually composing them to share their behavior.
+
+**********
+
+Classes are a design pattern. Many languages provide syntax which enables natural class-oriented software design. JS also has a similar syntax, but it behaves very differently from what you're used to with classes in those other languages.
+
+Classes mean copies.
+
+When traditional classes are instantiated, a copy of behavior from class to instance occurs. When classes are inherited, a copy of behavior from parent to child also occurs.
+
+Polymorphism (having different functions at multiple levels of an inheritance chain with the same name) may seem like it implies a referential relative link from child back to parent, but it's still just a result of copy behavior.
+
+JavaScript does not automatically create copies (as classes imply) between objects.
+
+The mixin pattern (both explicit and implicit) is often used to sort of emulate class copy behavior, but this usually leads to ugly and brittle syntax like explicit pseudo-polymorphism (OtherObj.methodName.call(this, ...)), which often results in harder to understand and maintain code.
+
+Explicit mixins are also not exactly the same as class copy, since objects (and functions!) only have shared references duplicated, not the objects/functions duplicated themselves. Not paying attention to such nuance is the source of a variety of gotchas.
+
+In general, faking classes in JS often sets more landmines for future coding than solving present real problems.
+
+**************
+
+When attempting a property access on an object that doesn't have that property, the object's internal [[Prototype]] linkage defines where the [[Get]] operation (see Chapter 3) should look next. This cascading linkage from object to object essentially defines a "prototype chain" (somewhat similar to a nested scope chain) of objects to traverse for property resolution.
+
+All normal objects have the built-in Object.prototype as the top of the prototype chain (like the global scope in scope look-up), where property resolution will stop if not found anywhere prior in the chain. toString(), valueOf(), and several other common utilities exist on this Object.prototype object, explaining how all objects in the language are able to access them.
+
+The most common way to get two objects linked to each other is using the new keyword with a function call, which among its four steps (see Chapter 2), it creates a new object linked to another object.
+
+The "another object" that the new object is linked to happens to be the object referenced by the arbitrarily named .prototype property of the function called with new. Functions called with new are often called "constructors", despite the fact that they are not actually instantiating a class as constructors do in traditional class-oriented languages.
+
+While these JavaScript mechanisms can seem to resemble "class instantiation" and "class inheritance" from traditional class-oriented languages, the key distinction is that in JavaScript, no copies are made. Rather, objects end up linked to each other via an internal [[Prototype]] chain.
+
+For a variety of reasons, not the least of which is terminology precedent, "inheritance" (and "prototypal inheritance") and all the other OO terms just do not make sense when considering how JavaScript actually works (not just applied to our forced mental models).
+
+Instead, "delegation" is a more appropriate term, because these relationships are not copies but delegation links.
+*****************
+
+Classes and inheritance are a design pattern you can choose, or not choose, in your software architecture. Most developers take for granted that classes are the only (proper) way to organize code, but here we've seen there's another less-commonly talked about pattern that's actually quite powerful: behavior delegation.
+
+Behavior delegation suggests objects as peers of each other, which delegate amongst themselves, rather than parent and child class relationships. JavaScript's [[Prototype]] mechanism is, by its very designed nature, a behavior delegation mechanism. That means we can either choose to struggle to implement class mechanics on top of JS (see Chapters 4 and 5), or we can just embrace the natural state of [[Prototype]] as a delegation mechanism.
+
+When you design code with objects only, not only does it simplify the syntax you use, but it can actually lead to simpler code architecture design.
+
+OLOO (objects-linked-to-other-objects) is a code style which creates and relates objects directly without the abstraction of classes. OLOO quite naturally implements [[Prototype]]-based behavior delegation.
+
+****************
+
+Functional programming is a set of techniques primarily designed to make both writing and reading of code easier to reason about. While you can get quickly overwhelmed by intense terminology, it's possible to benefit from functional programming concepts without all that mess.
+
+Pure functions have no side-effects / side-causes. Closure is a pure way of maintaining state without having observable side-effects. Functions can be composed with other functions to make reusable pieces to build our programs out of. Treating values as immutable reduces the places where you have think too closely how values change, since they don't! Finally, recursion expresses a solution in a more declarative than imperative way, making it easier to understand what will happen.
+
+All of these notions can be used in list-context (with arrays) to operate on multiple values instead of a single value.
+
+************
+
+A JavaScript program is (practically) always broken up into two or more chunks, where the first chunk runs now and the next chunk runs later, in response to an event. Even though the program is executed chunk-by-chunk, all of them share the same access to the program scope and state, so each modification to state is made on top of the previous state.
+
+Whenever there are events to run, the event loop runs until the queue is empty. Each iteration of the event loop is a "tick." User interaction, IO, and timers enqueue events on the event queue.
+
+At any given moment, only one event can be processed from the queue at a time. While an event is executing, it can directly or indirectly cause one or more subsequent events.
+
+Concurrency is when two or more chains of events interleave over time, such that from a high-level perspective, they appear to be running simultaneously (even though at any given moment only one event is being processed).
+
+It's often necessary to do some form of interaction coordination between these concurrent "processes" (as distinct from operating system processes), for instance to ensure ordering or to prevent "race conditions." These "processes" can also cooperate by breaking themselves into smaller chunks and to allow other "process" interleaving.
+
+***************
+
+Callbacks are the fundamental unit of asynchrony in JS. But they're not enough for the evolving landscape of async programming as JS matures.
+
+First, our brains plan things out in sequential, blocking, single-threaded semantic ways, but callbacks express asynchronous flow in a rather nonlinear, nonsequential way, which makes reasoning properly about such code much harder. Bad to reason about code is bad code that leads to bad bugs.
+
+We need a way to express asynchrony in a more synchronous, sequential, blocking manner, just like our brains do.
+
+Second, and more importantly, callbacks suffer from inversion of control in that they implicitly give control over to another party (often a third-party utility not in your control!) to invoke the continuation of your program. This control transfer leads us to a troubling list of trust issues, such as whether the callback is called more times than we expect.
+
+Inventing ad hoc logic to solve these trust issues is possible, but it's more difficult than it should be, and it produces clunkier and harder to maintain code, as well as code that is likely insufficiently protected from these hazards until you get visibly bitten by the bugs.
+
+We need a generalized solution to all of the trust issues, one that can be reused for as many callbacks as we create without all the extra boilerplate overhead.
+
+We need something better than callbacks. They've served us well to this point, but the future of JavaScript demands more sophisticated and capable async patterns. The subsequent chapters in this book will dive into those emerging evolutions.
+
+**********
+
+A function is referred to as a callback (or continuation) when it signals to another part of the application (including perhaps the JS engine itself) where to "call back" into our program to continue, at some later time when the async action completes.
+
+A series of async actions can be chained together by having a callback from action 1 fire off action 2, and its callback fire off action 3, etc.
+
+"Callback Hell" is often cited as nesting inline function expressions to control such a series of tasks. However, you can often refactor such code to have little or no obvious nesting or indentation pains, and yet the code will still be victim of callback hell. Callback hell is really about the lack of trustability and the lack of sequential reasonability.
+
+****************
+
+Promises are awesome. Use them. They solve the inversion of control issues that plague us with callbacks-only code.
+
+They don't get rid of callbacks, they just redirect the orchestration of those callbacks to a trustable intermediary mechanism that sits between us and another utility.
+
+Promise chains also begin to address (though certainly not perfectly) a better way of expressing async flow in sequential fashion, which helps our brains plan and maintain async JS code better. We'll see an even better solution to that problem in the next chapter!
+
+***************
+
+Regardless of what you may have heard, “callback hell” is not really about nested functions and the indentations they create in our code editor.
+It’s about Inversion of Control, which means that we lose control of the continuation of our program by handing it off to a third-party we’re not in control of and that we cannot trust.
+Promises uninvert that paradigm, leaving our program in control as it should be. Instead of passing a callback to a third-party (asynchronous) function, that function returns back a promise (or promise-like object), which we can use to listen for completion or failure.
+We still use callbacks with promises, but the important part is that standardized promise mechanisms (either built-in or using a compliant library) give us a solid foundation of trust about the sanity of their behavior, so that we don’t have to invent ad hoc solutions to handle these trust concerns.
+
+***************
+
+As JavaScript continues to mature and grow in its widespread adoption, asynchronous programming is more and more of a central concern. Callbacks are not fully sufficient for these tasks, and totally fall down the more sophisticated the need.
+
+Thankfully, ES6 adds Promises to address one of the major shortcomings of callbacks: lack of trust in predictable behavior. Promises represent the future completion value from a potentially async task, normalizing behavior across sync and async boundaries.
+
+But it's the combination of Promises with generators that fully realizes the benefits of rearranging our async flow control code to de-emphasize and abstract away that ugly callback soup (aka "hell").
+
+Right now, we can manage these interactions with the aide of various async libraries' runners, but JavaScript is eventually going to support this interaction pattern with dedicated syntax alone!
+
+****************
+
+Promises are future values, event listeners, or callback managers, depending on how you look at them. Promise chains provide a declarative form of flow control for async series.
+
+
